@@ -1,59 +1,67 @@
-module AlexPayne
+module NinaJansen
+  class TextHelperWrapper
+    include ActionView::Helpers
+    include Singleton
+  end
   module Acts #:nodoc: all
     module Sanitized
       def self.included(base)
         base.extend(ClassMethods)
+        
       end
-
+       
       module ClassMethods
+        
         def acts_as_sanitized(options = {})
-          before_save :sanitize_fields
+          include NinaJansen::Acts::Sanitized::InstanceMethods
+          alias_method :write_attribute_without_sanitize, :write_attribute
+          alias_method :write_attribute, :write_attribute_with_sanitize
 
+          options[:clean_fields] = options[:clean_fields].collect{ |field| field.to_sym } if options[:clean_fields]
+          options[:strip_fields] = options[:strip_fields].collect{ |field| field.to_sym } if options[:strip_fields]
           write_inheritable_attribute(:acts_as_sanitized_options, {
-            :fields => options[:fields],
-            :strip_tags => options[:strip_tags]
+            :clean_fields => options[:clean_fields],
+            :strip_fields => options[:strip_fields],
           })
 
           class_inheritable_reader :acts_as_sanitized_options
 
-          # discover sanitizable (string and text) fields if none specified
-          unless acts_as_sanitized_options[:fields]
-            acts_as_sanitized_options[:fields] = []
-            
-            self.columns.each do |column|
-              if column.type == :string || column.type == :text
-                acts_as_sanitized_options[:fields].push(column.name)
-              end
-            end
+          if (!acts_as_sanitized_options[:clean_fields])
+            acts_as_sanitized_options[:clean_fields] = []
           end
           
-          include AlexPayne::Acts::Sanitized::InstanceMethods
+          if (!acts_as_sanitized_options[:strip_fields])
+            acts_as_sanitized_options[:strip_fields] = []
+          end
         end
       end
 
       module InstanceMethods
-        include ActionView::Helpers::TextHelper
-        
-        def sanitize_fields
-          if acts_as_sanitized_options[:strip_tags] == true
-            acts_as_sanitized_options[:fields].each do |field|
-              strip_tags_field(field)
-            end
-          else
-            acts_as_sanitized_options[:fields].each do |field|
-              sanitize_field(field)
-            end
+        if Object.const_defined?(:WhiteListHelper)
+          include WhiteListHelper
+          def sanitize_field(content)
+            white_list(content) { |node, bad| white_listed_bad_tags.include?(bad) ? nil : node.to_s.gsub(/</, '&lt;') } 
+          end
+        else
+          def sanitize_field(content)
+            TextHelperWrapper.instance.sanitize(content)      
           end
         end
+        
+        def write_attribute_with_sanitize(attr_name, value)
 
-        def sanitize_field(field)
-          content = self[field.to_sym]
-          self[field.to_sym] = sanitize(content) unless content.nil?
+          if !value.nil? && acts_as_sanitized_options[:clean_fields].include?(attr_name.to_sym)
+            value = sanitize_field(value) 
+          end
+
+          if !value.nil? && acts_as_sanitized_options[:strip_fields].include?(attr_name.to_sym)
+            value = strip_tags_field(value) 
+          end 
+          write_attribute_without_sanitize(attr_name, value)          
         end
         
-        def strip_tags_field(field)
-          content = self[field.to_sym]
-          self[field.to_sym] = strip_tags(content) unless content.nil?
+        def strip_tags_field(content)
+          TextHelperWrapper.instance.strip_tags(content) unless content.nil?
         end
       end
     end

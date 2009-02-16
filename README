@@ -40,5 +40,7 @@ If you'd like to use all the fancy options at once:
 
 Written by Alex Payne of http://www.al3x.net.
 
+Modified by Nina Jansen (http://ninajansen.dk), to work with rails 2.2
+
 Much was learned from reading Chris Wanstrath's acts_as_textiled and the Rails
 core team's acts_as_taggable.

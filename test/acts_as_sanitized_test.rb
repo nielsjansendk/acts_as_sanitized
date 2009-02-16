@@ -1,13 +1,20 @@
 require File.join(File.dirname(__FILE__), 'setup_test')
 
 class ActsAsSanitizedTest < Test::Unit::TestCase  
+  def test_field_assignments
+    e = Entry.new
+    e.title = 'test'
+    assert e.title == 'test'
+    e.title = nil
+    assert e.title == nil
+  end
   def test_field_specification
     e = Entry.new(:title => "Test entry",
                   :body => "Lorem ipsum etc. etc.",
                   :extended => "Yet more lorem ipsum...",
                   :person_id => 1)
                   
-    assert_equal ["title", "body"], e.acts_as_sanitized_options[:fields]
+    assert_equal [:title, :body], e.acts_as_sanitized_options[:fields]
   end
   
   def test_field_discovery
@@ -15,7 +22,7 @@ class ActsAsSanitizedTest < Test::Unit::TestCase
                     :title => "Test title",
                     :body => "Test body")
     
-    assert_equal ["title", "body"], c.acts_as_sanitized_options[:fields]
+    assert_equal [:title, :body], c.acts_as_sanitized_options[:fields]
   end
   
   def test_uncontaminated_model
